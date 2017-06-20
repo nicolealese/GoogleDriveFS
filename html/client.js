@@ -11,6 +11,26 @@ var oauthToken;
 
 const path = require('path');
 
+function loadScript(url, callback)
+{
+    // Adding the script tag to the head as suggested before
+    var head = document.getElementsByTagName('head')[0];
+    var script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = url;
+
+    // Then bind the event to the callback function.
+    // There are several events for cross browser compatibility.
+    script.onreadystatechange = callback;
+    script.onload = callback;
+
+    // Fire the loading
+    head.appendChild(script);
+}
+
+
+loadScript("https://apis.google.com/js/api.js", onApiLoad);
+
 
 // Use the API Loader script to load google.picker and gapi.auth.
 function onApiLoad() {
@@ -37,6 +57,51 @@ function handleAuthResult(authResult) {
     }
 }
 
+function stat() {
+     var pathName = prompt("Enter the path name : ", "path name here");
+    if (pathName === null) {
+        console.log("no valid path name");
+    } else {
+        printMetaData(pathName);
+    }
+
+}
+
+function printMetaData(p) {
+    const title = path.basename(p);
+    const dir = path.dirname(p);
+    const base = path.basename(dir);
+
+    var request = gapi.client.drive.files.list({
+        "q": "title = '" + title + "'"
+    });
+    request.execute(function(resp) {
+        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+        var id = resp.items[0].id;
+        var secondRequest = gapi.client.drive.files.get({
+    'fileId': id
+  });
+  secondRequest.execute(function(resp) {
+    console.log('Title: ' + resp.title);
+    console.log('Description: ' + resp.description);
+    console.log('MIME type: ' + resp.mimeType);
+    var type = resp.mimeType; 
+    if (type === 'application/vnd.google-apps.folder') {
+        console.log("It is a folder"); 
+    }
+
+    else {
+        console.log("It is a file"); 
+    }
+  });
+}
+
+else {
+    console.log("That path does not exist"); 
+}
+    });
+}
+
 function makeDirectory() {
     var pathName = prompt("Enter the path name : ", "path name here");
     if (pathName === null) {
@@ -55,10 +120,13 @@ function mkdir(p) {
         "q": "title = '" + base + "'"
     });
     request.execute(function(resp) {
+        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
         var id = resp.items[0].id;
         console.log('id in callback = ' + id)
 
-        var access_token = oauthToken;
+        
+            console.log("defined");
+              var access_token = oauthToken;
         var secondRequest = gapi.client.request({
             'path': '/drive/v2/files/',
             'method': 'POST',
@@ -78,6 +146,32 @@ function mkdir(p) {
         secondRequest.execute(function(resp) {
             console.log('nested folder done creating')
         })
+
+        }
+
+        else {
+            console.log("undefined");
+            var access_token = oauthToken;
+        var secondRequest = gapi.client.request({
+            'path': '/drive/v2/files/',
+            'method': 'POST',
+            'headers': {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + access_token,
+            },
+            'body': {
+                "title": title,
+                "mimeType": "application/vnd.google-apps.folder",
+            }
+        });
+
+        secondRequest.execute(function(resp) {
+            console.log('nested folder done creating')
+        })
+
+        }
+
+      
     });
 }
 
@@ -267,4 +361,5 @@ module.exports = {
     trashFile,
     readFile,
     writeFile,
+    stat,
 };
