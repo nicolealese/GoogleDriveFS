@@ -64,7 +64,6 @@ function stat() {
     } else {
         printMetaData(pathName);
     }
-
 }
 
 function printMetaData(p) {
@@ -77,28 +76,26 @@ function printMetaData(p) {
     });
     request.execute(function(resp) {
         if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
-        var id = resp.items[0].id;
-        var secondRequest = gapi.client.drive.files.get({
-    'fileId': id
-  });
-  secondRequest.execute(function(resp) {
-    console.log('Title: ' + resp.title);
-    console.log('Description: ' + resp.description);
-    console.log('MIME type: ' + resp.mimeType);
-    var type = resp.mimeType; 
-    if (type === 'application/vnd.google-apps.folder') {
-        console.log("It is a folder"); 
-    }
-
-    else {
-        console.log("It is a file"); 
-    }
-  });
-}
-
-else {
-    console.log("That path does not exist"); 
-}
+            var id = resp.items[0].id;
+            var secondRequest = gapi.client.drive.files.get({
+                'fileId': id
+            });
+            secondRequest.execute(function(resp) {
+                console.log('Title: ' + resp.title);
+                console.log('Description: ' + resp.description);
+                console.log('MIME type: ' + resp.mimeType);
+                var type = resp.mimeType;
+                if (type === 'application/vnd.google-apps.folder') {
+                    console.log("It is a folder");
+                }
+                else {
+                    console.log("It is a file");
+                }
+            });
+        }
+        else {
+            console.log("That path does not exist");
+        }
     });
 }
 
@@ -115,43 +112,9 @@ function mkdir(p) {
     const title = path.basename(p);
     const dir = path.dirname(p);
     const base = path.basename(dir);
-
-    var request = gapi.client.drive.files.list({
-        "q": "title = '" + base + "'"
-    });
-    request.execute(function(resp) {
-        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
-        var id = resp.items[0].id;
-        console.log('id in callback = ' + id)
-
-        
-            console.log("defined");
-              var access_token = oauthToken;
-        var secondRequest = gapi.client.request({
-            'path': '/drive/v2/files/',
-            'method': 'POST',
-            'headers': {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + access_token,
-            },
-            'body': {
-                "title": title,
-                "parents": [{
-                    "id": id
-                }],
-                "mimeType": "application/vnd.google-apps.folder",
-            }
-        });
-
-        secondRequest.execute(function(resp) {
-            console.log('nested folder done creating')
-        })
-
-        }
-
-        else {
-            console.log("undefined");
-            var access_token = oauthToken;
+    if (base === '.') {
+        console.log("defined");
+        var access_token = oauthToken;
         var secondRequest = gapi.client.request({
             'path': '/drive/v2/files/',
             'method': 'POST',
@@ -164,15 +127,41 @@ function mkdir(p) {
                 "mimeType": "application/vnd.google-apps.folder",
             }
         });
-
         secondRequest.execute(function(resp) {
-            console.log('nested folder done creating')
+            console.log('folder in root done creating')
         })
-
-        }
-
-      
-    });
+    } else {
+        var request = gapi.client.drive.files.list({
+            "q": "title = '" + base + "'"
+        });
+        request.execute(function(resp) {
+            if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+                var id = resp.items[0].id;
+                var access_token = oauthToken;
+                var secondRequest = gapi.client.request({
+                    'path': '/drive/v2/files/',
+                    'method': 'POST',
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + access_token,
+                    },
+                    'body': {
+                        "title": title,
+                        "parents": [{
+                            "id": id
+                        }],
+                        "mimeType": "application/vnd.google-apps.folder",
+                    }
+                });
+                secondRequest.execute(function(resp) {
+                    console.log('nested folder done creating')
+                })
+            }
+            else {
+                console.log('Parent does not exist:' + dir);
+            }
+        });
+    }
 }
 
 function trashFile() {
@@ -345,14 +334,11 @@ function createFile(p) {
                 "mimeType": "text/html",
             }
         });
-
         secondRequest.execute(function(resp) {
             console.log('nested file done creating')
         })
     });
 }
-
-
 
 module.exports = {
     onApiLoad,
