@@ -214,45 +214,49 @@ function writeAFile(p, callback) {
         "q": "title = '" + title + "'"
     });
     request.execute(function(resp) {
-        var id = resp.items[0].id;
-        var text = prompt("Enter your text here: ", "text here");
-        const boundary = '-------314159265358979323846';
-        const delimiter = "\r\n--" + boundary + "\r\n";
-        const close_delim = "\r\n--" + boundary + "--";
+        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+            var id = resp.items[0].id;
+            var text = prompt("Enter your text here: ", "text here");
+            const boundary = '-------314159265358979323846';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
 
-        var contentType = "text/html";
-        var metadata = {
-            'mimeType': contentType,
-        };
+            var contentType = "text/html";
+            var metadata = {
+                'mimeType': contentType,
+            };
 
-        var multipartRequestBody =
+            var multipartRequestBody =
             delimiter + 'Content-Type: application/json\r\n\r\n' +
             JSON.stringify(metadata) +
             delimiter + 'Content-Type: ' + contentType + '\r\n' + '\r\n' +
             text +
             close_delim;
 
-        if (!callback) {
-            callback = function(file) {
-                console.log("Update Complete ", file)
-            };
+            if (!callback) {
+                callback = function(file) {
+                    console.log("Update Complete ", file)
+                };
+            }
+
+            gapi.client.request({
+                'path': '/upload/drive/v3/files/' + id + "&uploadType=multipart",
+                'method': 'PATCH',
+                'params': {
+                    'fileId': id,
+                    'uploadType': 'multipart'
+                },
+                'headers': {
+                    'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+                },
+                'body': multipartRequestBody,
+                callback: callback,
+            });
         }
-
-        gapi.client.request({
-            'path': '/upload/drive/v3/files/' + id + "&uploadType=multipart",
-            'method': 'PATCH',
-            'params': {
-                'fileId': id,
-                'uploadType': 'multipart'
-            },
-            'headers': {
-                'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
-            },
-            'body': multipartRequestBody,
-            callback: callback,
-        });
+        else {
+            console.log("The file does not exist and cannot be updated");
+        }
     });
-
 }
 
 function readFile() {
