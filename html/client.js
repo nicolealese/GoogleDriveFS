@@ -58,7 +58,7 @@ function handleAuthResult(authResult) {
 }
 
 function stat() {
-     var pathName = prompt("Enter the path name : ", "path name here");
+    var pathName = prompt("Enter the path name : ", "path name here");
     if (pathName === null) {
         console.log("no valid path name");
     } else {
@@ -214,7 +214,7 @@ function writeAFile(p, callback) {
         "q": "title = '" + title + "'"
     });
     request.execute(function(resp) {
-        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+        if (typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined') {
             var id = resp.items[0].id;
             var text = prompt("Enter your text here: ", "text here");
             const boundary = '-------314159265358979323846';
@@ -344,6 +344,131 @@ function createFile(p) {
     });
 }
 
+function ls() {
+    var pathName = prompt("Enter the path name : ", "path name here");
+    if (pathName === null) {
+        console.log("no valid path name");
+    } else {
+        listFiles(pathName);
+    }
+}
+
+function listFiles(p) {
+    const title = path.basename(p);
+    const dir = path.dirname(p);
+    const base = path.basename(dir);
+
+    var request = gapi.client.drive.files.list({
+        "q": "title = '" + title + "'"
+    });
+    request.execute(function(resp) {
+        var id = resp.items[0].id;
+        var retrievePageOfChildren = function(request, result) {
+            request.execute(function(resp) {
+                var secondId;
+                for (i = 0; i < resp.items.length + 1; i++) {
+                    var secondId = resp.items[i].id;
+                    var secondRequest = gapi.client.drive.files.get({
+                        'fileId': secondId
+                    });
+                    secondRequest.execute(function(resp) {
+                        console.log('Title: ' + resp.title);
+                        // console.log('Description: ' + resp.description);
+                        // console.log('MIME type: ' + resp.mimeType);
+                        // //var array = [resp.title];
+                        // var array = [];
+                        // array.push(resp.title);
+                        // console.log("the array is: " + array);
+                    });
+                }
+            });
+        }
+        var initialRequest = gapi.client.drive.children.list({
+            'folderId' : id
+        });
+        retrievePageOfChildren(initialRequest, []);
+    });
+}
+
+function rmdir() {
+    var pathName = prompt("Enter the path name : ", "path name here");
+    if (pathName === null) {
+        console.log("no valid path name");
+    } else {
+        removeDirectory(pathName);
+    }
+}
+
+function removeDirectory(p) {
+    const title = path.basename(p);
+    const dir = path.dirname(p);
+    const base = path.basename(dir);
+
+    var request = gapi.client.drive.files.list({
+        "q": "title = '" + title + "'"
+    });
+    request.execute(function(resp) {
+        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+            var id = resp.items[0].id;
+            var secondRequest = gapi.client.drive.files.get({
+                'fileId': id
+            });
+            secondRequest.execute(function(resp) {
+                var type = resp.mimeType;
+                if (type === 'application/vnd.google-apps.folder') {
+                    trashOldFile(p);
+                }
+                else {
+                    console.log("Error: it is a file !");
+                }
+            });
+        }
+        else {
+            console.log("That path does not exist");
+        }
+    });
+
+}
+
+function rm() {
+    var pathName = prompt("Enter the path name : ", "path name here");
+    if (pathName === null) {
+        console.log("no valid path name");
+    } else {
+        unlink(pathName);
+    }
+}
+
+function unlink(p) {
+    const title = path.basename(p);
+    const dir = path.dirname(p);
+    const base = path.basename(dir);
+
+    var request = gapi.client.drive.files.list({
+        "q": "title = '" + title + "'"
+    });
+    request.execute(function(resp) {
+        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
+            var id = resp.items[0].id;
+            var secondRequest = gapi.client.drive.files.get({
+                'fileId': id
+            });
+            secondRequest.execute(function(resp) {
+                var type = resp.mimeType;
+                if (type === 'application/vnd.google-apps.folder') {
+                  console.log("Error: it is a folder !");  
+                }
+                else {
+                    trashOldFile(p);
+                }
+            });
+        }
+        else {
+            console.log("That path does not exist");
+        }
+    });
+}
+
 module.exports = {
     onApiLoad,
     makeDirectory,
@@ -352,4 +477,7 @@ module.exports = {
     readFile,
     writeFile,
     stat,
+    ls,
+    rmdir,
+    rm,
 };
