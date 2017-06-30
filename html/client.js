@@ -198,14 +198,15 @@ function trashOldFile(p) {
 
 function writeFile() {
     var pathName = prompt("Enter the path name : ", "path name here");
+    var text = prompt("Enter your text here: ", "text here");
     if (pathName === null) {
         console.log("no valid path name");
     } else {
-        writeAFile(pathName);
+        writeAFile(pathName, text);
     }
 }
 
-function writeAFile(p, callback) {
+function writeAFile(p, data, callback) {
     const title = path.basename(p);
     const dir = path.dirname(p);
     const base = path.basename(dir);
@@ -216,7 +217,6 @@ function writeAFile(p, callback) {
     request.execute(function(resp) {
         if (typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined') {
             var id = resp.items[0].id;
-            var text = prompt("Enter your text here: ", "text here");
             const boundary = '-------314159265358979323846';
             const delimiter = "\r\n--" + boundary + "\r\n";
             const close_delim = "\r\n--" + boundary + "--";
@@ -230,7 +230,7 @@ function writeAFile(p, callback) {
             delimiter + 'Content-Type: application/json\r\n\r\n' +
             JSON.stringify(metadata) +
             delimiter + 'Content-Type: ' + contentType + '\r\n' + '\r\n' +
-            text +
+            data +
             close_delim;
 
             if (!callback) {
@@ -366,21 +366,21 @@ function listFiles(p) {
         var retrievePageOfChildren = function(request, result) {
             request.execute(function(resp) {
                 var secondId;
-                for (i = 0; i < resp.items.length + 1; i++) {
-                    var secondId = resp.items[i].id;
-                    var secondRequest = gapi.client.drive.files.get({
+                var i = 0; 
+                while (i < resp.items.length) {
+                    secondId = resp.items[i].id;  
+                    i++;
+                     var nameArray = []; 
+
+                     var secondRequest = gapi.client.drive.files.get({
                         'fileId': secondId
                     });
                     secondRequest.execute(function(resp) {
-                        console.log('Title: ' + resp.title);
-                        // console.log('Description: ' + resp.description);
-                        // console.log('MIME type: ' + resp.mimeType);
-                        // //var array = [resp.title];
-                        // var array = [];
-                        // array.push(resp.title);
-                        // console.log("the array is: " + array);
+                            nameArray.push(resp.title); 
+                        console.log("the name array is: " + nameArray);
                     });
                 }
+                  
             });
         }
         var initialRequest = gapi.client.drive.children.list({
@@ -469,6 +469,61 @@ function unlink(p) {
     });
 }
 
+function rnm() {
+    var oldPathName = prompt("Enter the old path name : ", "path name here");
+    var newPathName = prompt("Enter the new path name : ", "path name here");
+    if (oldPathName === null || newPathName === null) {
+        console.log("no valid path name");
+    } else {
+        rename(oldPathName, newPathName); 
+    }
+}
+
+function rename(oldPath, newPath) {
+    const title = path.basename(oldPath);
+
+    var request = gapi.client.drive.files.list({
+        "q": "title = '" + title + "'"
+    });
+    request.execute(function(resp) {
+        var id = resp.items[0].id;
+        var secondRequest = gapi.client.drive.files.get({
+            'fileId': id
+        });
+
+        secondRequest.execute(function(resp) {
+            var type = resp.mimeType;
+            if (type === 'application/vnd.google-apps.folder') {
+                mkdir(newPath);
+                trashOldFile(oldPath);
+            }
+            else {
+                var data; 
+                // make the request to the google drive server
+                gapi.client.request({
+                    path: '/drive/v2/files/' + id,
+                    method: 'GET',
+                    callback: function(obj) {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("GET", obj.downloadUrl);
+                        xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
+                        xhr.onload = function() {
+                            data = xhr.response;
+                            var output = document.getElementById("output");
+                            docID = id;
+                            console.log("the data is: " + data);
+                            createFile(newPath);
+                            writeAFile(newPath, data);
+                            trashOldFile(oldPath);
+                        }
+                        xhr.send();
+                    }
+                });   
+            }
+        });
+    });
+}
+
 module.exports = {
     onApiLoad,
     makeDirectory,
@@ -480,4 +535,5 @@ module.exports = {
     ls,
     rmdir,
     rm,
+    rnm,
 };
