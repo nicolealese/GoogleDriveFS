@@ -68,32 +68,24 @@ function stat() {
 
 function printMetaData(p) {
     const title = path.basename(p);
-    const dir = path.dirname(p);
-    const base = path.basename(dir);
-
-    var request = gapi.client.drive.files.list({
-        "q": "title = '" + title + "'"
+    const request = gapi.client.drive.files.list({
+        q: "title = '" + title + "'",
     });
-    request.execute(function(resp) {
-        if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
-            var id = resp.items[0].id;
-            var secondRequest = gapi.client.drive.files.get({
-                'fileId': id
+    request.execute((resp) => {
+        if (typeof resp.items !== 'undefined' && typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined') {
+            const id = resp.items[0].id;
+            const secondRequest = gapi.client.drive.files.get({
+                fileId: id
             });
             secondRequest.execute(function(resp) {
-                console.log('Title: ' + resp.title);
-                console.log('Description: ' + resp.description);
-                console.log('MIME type: ' + resp.mimeType);
-                var type = resp.mimeType;
+                const type = resp.mimeType;
                 if (type === 'application/vnd.google-apps.folder') {
                     console.log("It is a folder");
-                }
-                else {
+                } else {
                     console.log("It is a file");
                 }
             });
-        }
-        else {
+        } else {
             console.log("That path does not exist");
         }
     });
