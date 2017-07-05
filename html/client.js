@@ -104,55 +104,56 @@ function mkdir(p) {
     const title = path.basename(p);
     const dir = path.dirname(p);
     const base = path.basename(dir);
+
     if (base === '.') {
-        console.log("defined");
-        var access_token = oauthToken;
-        var secondRequest = gapi.client.request({
-            'path': '/drive/v2/files/',
-            'method': 'POST',
-            'headers': {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + access_token,
-            },
-            'body': {
-                "title": title,
-                "mimeType": "application/vnd.google-apps.folder",
-            }
-        });
-        secondRequest.execute(function(resp) {
-            console.log('folder in root done creating')
-        })
+      const accessToken = oauthToken;
+      const secondRequest = gapi.client.request({
+        path: '/drive/v2/files/',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + accessToken,
+        },
+        body: {
+          title: title,
+          mimeType: 'application/vnd.google-apps.folder',
+        }
+      });
+      secondRequest.execute(function(resp) {
+        console.log("folder in root done creating");
+      });
     } else {
-        var request = gapi.client.drive.files.list({
-            "q": "title = '" + base + "'"
-        });
-        request.execute(function(resp) {
-            if(typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined'){
-                var id = resp.items[0].id;
-                var access_token = oauthToken;
-                var secondRequest = gapi.client.request({
-                    'path': '/drive/v2/files/',
-                    'method': 'POST',
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + access_token,
-                    },
-                    'body': {
-                        "title": title,
-                        "parents": [{
-                            "id": id
-                        }],
-                        "mimeType": "application/vnd.google-apps.folder",
-                    }
-                });
-                secondRequest.execute(function(resp) {
-                    console.log('nested folder done creating')
-                })
+      const request = gapi.client.drive.files.list({
+        q: "title = '" + base + "'"
+      });
+
+      request.execute((resp) => {
+        if (typeof resp.items !== 'undefined' && typeof resp.items[0] !== 'undefined' && typeof resp.items[0].id !== 'undefined') {
+          const id = resp.items[0].id;
+          const accessToken = oauthToken;
+          const secondRequest = gapi.client.request({
+            path: '/drive/v2/files/',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + accessToken,
+            },
+            body: {
+              title: title,
+              parents: [{
+                id: id
+              }],
+              mimeType: 'application/vnd.google-apps.folder',
             }
-            else {
-                console.log('Parent does not exist:' + dir);
-            }
-        });
+          });
+
+          secondRequest.execute(function(resp) {
+            console.log("nested folder done creating");
+          });
+        } else {
+          console.log("parent does not exist" + dir);
+        }
+      });
     }
 }
 
